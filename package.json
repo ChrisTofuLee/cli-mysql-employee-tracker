@@ -1,0 +1,23 @@
+{
+  "name": "chris-homework-w12",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChrisTofuLee/cli-mysql-employee-tracker.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ChrisTofuLee/cli-mysql-employee-tracker/issues"
+  },
+  "homepage": "https://github.com/ChrisTofuLee/cli-mysql-employee-tracker#readme",
+  "dependencies": {
+    "inquirer": "^7.2.0",
+    "mysql": "^2.18.1"
+  }
+}
