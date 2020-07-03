@@ -171,18 +171,36 @@ const init = async () => {
 
       connection.query(queryRole, onQueryRole);
     case "addEmployee":
-      const queryAddEmployee = "SELECT * FROM employee";
+      const queryAddEmployee = `SELECT * FROM employee  left join role on employee.role_id = role.id
+      GROUP BY role_id`;
       const onQueryAddEmployee = async (err, rows) => {
         if (err) throw err;
 
-        const roleChoices = rows.map((row) => {
+        const addRoleChoices = rows.map((row) => {
           return {
             name: row.title,
-            value: row.id,
+            value: row.role_id,
             short: row.title,
           };
         });
 
+        const managerChoices = await rows.map((row) => {
+          return {
+            name: `${row.first_name} ${row.last_name}`,
+            value: row.id,
+            short: `${row.first_name} ${row.last_name}`,
+          };
+        });
+        // .push({
+        //   name: "none",
+        //   value: "none",
+        //   short: "none",
+        // });
+        // const managerChoices = managerGenerator.push({
+        //   name: "none",
+        //   value: "none",
+        //   short: "none",
+        // });
         const addQuestions = [
           {
             message: "what is the new employee's name?",
@@ -198,70 +216,163 @@ const init = async () => {
             message: "What is their role?",
             name: "roleId",
             type: "list",
-            choices: roleChoices,
+            choices: addRoleChoices,
           },
           {
-            message: "Whoe is their manager?",
+            message: "Do they have a manager?",
+            name: "managerChecker",
+            type: "list",
+            choices: ["Yes", "No"],
+          },
+          {
+            message: "Who is their manager?",
             name: "managerId",
             type: "list",
             choices: managerChoices,
-          }
+            when: (answers) => answers.managerChecker === "Yes",
+          },
         ];
 
-        const { roleId } = await inquirer.prompt(addQuestions);
+        const addAnswers = await inquirer.prompt(addQuestions);
+        console.log(addAnswers.managerId);
+        const queryAddingEmployee = `
+        INSERT INTO employee SET 
+        first_name= "${addAnswers.addFirstName}", 
+        last_name= "${addAnswers.addLastName}", 
+        role_id= "${addAnswers.roleId}",
+        manager_id= "${addAnswers.managerId}";`;
+        // SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager FROM employee LEFT JOIN role on employee.role_id = role.id LEFT JOIN department on role.department_id = department.id LEFT JOIN employee manager on manager.id = employee.manager_id;;
 
-        const queryEmployeesByRole = `
-        SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department,
-        CONCAT(manager.first_name, ' ', manager.last_name) AS manager
-        FROM employee
-        LEFT JOIN role on employee.role_id = role.id 
-        LEFT JOIN department on role.department_id = department.id 
-        LEFT JOIN employee manager on manager.id = employee.manager_id
-        WHERE role.id = ${roleId}`;
-
-        connection.query(queryEmployeesByRole, onEmployeeQuery);
+        const addSuccess = (err, rows) => {
+          if (err) throw err;
+          console.log("Employee Successfully Added!");
+          init();
+        };
+        connection.query(queryAddingEmployee, addSuccess);
       };
 
       connection.query(queryAddEmployee, onQueryAddEmployee);
       break;
-    case "allSongs":
-      const { artist } = await inquirer.prompt({
-        message: "Name of the Artist",
-        name: "artist",
-      });
-      selectWhere(connection, "top5000", { artist });
-      break;
-    case "allDuplicateArtists":
-      multipleOccurrences(connection, "artist", "top5000");
-      break;
-    case "allSongsInRange":
-      const { start, end } = await inquirer.prompt([
+    case "addDepartment":
+      const addDeptQuestions = [
         {
-          message: "Start Year",
-          name: "start",
+          message: "What is the name of the department?",
+          name: "name",
         },
-        {
-          message: "End Year",
-          name: "end",
-        },
-      ]);
-      rangeSearch(connection, {
-        columns: ["artist", "release_year"],
-        table: "top5000",
-        column: "release_year",
-        start,
-        end,
-      });
+      ];
+
+      const { deptName } = await inquirer.prompt(addDeptQuestions);
+
+      const addDeptQuery = `INSERT INTO department (name) VALUES ("${deptName}") `;
+
+      const deptCreateSuccess = (err) => {
+        if (err) throw err;
+        console.log("Successfully created a department");
+        init();
+      };
+
+      connection.query(addDeptQuery, deptCreateSuccess);
       break;
-    case "specificSong":
-      const { single } = await inquirer.prompt({
-        message: "Name of the Single",
-        name: "single",
-      });
-      selectWhere(connection, "top5000", { single });
+    case "addRole":
+      const queryAddRole =
+        "SELECT * FROM role  left join department on role.department_id = department.id GROUP BY department_id";
+
+      const onQueryAddRole = async (err, rows) => {
+        const numberValidation = (input) => {
+          if (isNaN(input)) {
+            return "please enter numbers only";
+          }
+          return true;
+        };
+
+        const addRollChoices = rows.map((row) => {
+          return {
+            name: row.name,
+            value: row.department_id,
+            short: row.name,
+          };
+        });
+        const addRoleQuestions = [
+          {
+            message: "What is the name of the role?",
+            name: "title",
+          },
+          {
+            message: "what is the salary of this role?",
+            name: "salary",
+            type: "input",
+            validate: function (value) {
+              if (isNaN(value)) {
+                return "please enter numbers only";
+              }
+              return true;
+            },
+          },
+          {
+            message: "which department is this role in?",
+            name: "department_id",
+            type: "list",
+            choices: addRollChoices,
+          },
+        ];
+
+        const rollAnswers = await inquirer.prompt(addRoleQuestions);
+
+        const queryAddingRole = `
+        INSERT INTO role SET 
+        title= "${rollAnswers.title}", 
+        salary= "${rollAnswers.salary}", 
+        department_id= "${rollAnswers.department_id}"`;
+
+        const rollCreateSuccess = (err) => {
+          if (err) throw err;
+          console.log("Successfully created a roll");
+          init();
+        };
+
+        connection.query(queryAddingRole, rollCreateSuccess);
+      };
+
+      connection.query(queryAddRole, onQueryAddRole);
       break;
-    default:
-      break;
+    // case "allSongs":
+    //   const { artist } = await inquirer.prompt({
+    //     message: "Name of the Artist",
+    //     name: "artist",
+    //   });
+    //   selectWhere(connection, "top5000", { artist });
+    //   break;
+    // case "allDuplicateArtists":
+    //   multipleOccurrences(connection, "artist", "top5000");
+    //   break;
+    // case "allSongsInRange":
+    //   const { start, end } = await inquirer.prompt([
+    //     {
+    //       message: "Start Year",
+    //       name: "start",
+    //     },
+    //     {
+    //       message: "End Year",
+    //       name: "end",
+    //     },
+    //   ]);
+    //   rangeSearch(connection, {
+    //     columns: ["artist", "release_year"],
+    //     table: "top5000",
+    //     column: "release_year",
+    //     start,
+    //     end,
+    //   });
+    //   break;
+    // case "specificSong":
+    //   const { single } = await inquirer.prompt({
+    //     message: "Name of the Single",
+    //     name: "single",
+    //   });
+    //   selectWhere(connection, "top5000", { single });
+    //   break;
+    // default:
+    //   break;
   }
 };
 const onConnect = (err) => {
