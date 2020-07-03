@@ -5,28 +5,42 @@ CREATE DATABASE company_db;
 USE company_db;
 
 CREATE TABLE department (
-  id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  id int UNISGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(30) NOT NULL
 );
 
 CREATE TABLE role (
-  id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  id int UNISGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(30) NOT NULL,
   salary DECIMAL NOT NULL,
-  department_id INT,
-  FOREIGN KEY (department_id) REFERENCES department(id)
+  department_id INT UNSIGNED NOT NULL,
+  CONSTRAINT fk_department FOREIGN KEY (department_id) REFERENCES department(id) ON DELETE CASCADE
 );
 
 CREATE TABLE employee (
-  id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  id int UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   first_name VARCHAR(30) NOT NULL,
   last_name VARCHAR(30) NOT NULL,
-  role_id INT,
-  manager_id INT,
-  FOREIGN KEY (role_id) REFERENCES role(id),
-  FOREIGN KEY (manager_id) REFERENCES employee(id)
+  role_id INT UNSIGNED NOT NULL,
+  manager_id INT UNSIGNED NULL,
+  CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE CASCADE,
+  CONSTRAINT fk_manager FOREIGN KEY (manager_id) REFERENCES employee(id) ON DELETE SET NULL
 );
 
-INSERT INTO department (name) VALUES ('IT'), ('Finance');
-INSERT INTO role (title, salary, department_id) VALUES ('IT Technician', 20000, 1), ('IT Manager', 40000, 2), ('Accountant', 20500, 3), ('Senior Accountant', 39000, 4);
-INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ('Chris', 'Lee', 2, null), ('John', 'Don', 1, 1), ('Harvey', 'Jackson', 4, null), ('Mary', 'Sherry', 3, 3);
+
+--for view all
+SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary,
+CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+FROM employee 
+LEFT JOIN role 
+on employee.role_id = role.id 
+LEFT JOIN department 
+on role.department_id = department.id 
+LEFT JOIN employee manager 
+on manager.id = employee.manager_id
+
+
+-- for view by department
+-- SELECT role.id, role.title, department.name AS department, role.salary FROM role LEFT JOIN department on role.department_id = department.id
+
+
