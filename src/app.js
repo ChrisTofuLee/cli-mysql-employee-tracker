@@ -13,6 +13,7 @@ const connection = mysql.createConnection({
   database: "company_db",
   user: "root",
   password: "Password",
+  multipleStatements: true,
 });
 
 const questions = [
@@ -36,11 +37,11 @@ const questions = [
         value: "employeesByRole",
         short: "Employees by roles",
       },
-      //   {
-      //     name: "View employees by manager",
-      //     value: "employeesByManager",
-      //     short: "Employees By Manager",
-      //   },
+      {
+        name: "View employees by manager",
+        value: "employeesByManager",
+        short: "Employees By Manager",
+      },
       {
         name: "Add employee",
         value: "addEmployee",
@@ -56,21 +57,26 @@ const questions = [
         value: "addRole",
         short: "Add Role",
       },
-      //   {
-      //     name: "Remove employee",
-      //     value: "removeEmployee",
-      //     short: "Remove Employee",
-      //   },
+      {
+        name: "Remove employee",
+        value: "removeEmployee",
+        short: "Remove Employee",
+      },
       {
         name: "Update employee role",
         value: "updateRole",
         short: "Update Role",
       },
-      //   {
-      //     name: "Update employee manager",
-      //     value: "updateManager",
-      //     short: "Update Employee Manager",
-      //   },
+        {
+          name: "Update employee manager",
+          value: "updateManager",
+          short: "Update Employee Manager",
+        },
+      {
+        name: "End application",
+        value: "end",
+        short: "Finish"
+      }
     ],
   },
 ];
@@ -82,6 +88,7 @@ const init = async () => {
     init();
   };
   const { operation } = await inquirer.prompt(questions);
+  const allEmployeesQuery = "SELECT * FROM employee";
 
   switch (operation) {
     case "viewAll":
@@ -171,12 +178,12 @@ const init = async () => {
 
       connection.query(queryRole, onQueryRole);
     case "addEmployee":
-      const queryAddEmployee = `SELECT * FROM employee  left join role on employee.role_id = role.id
+      const queryAddEmployee = `SELECT * FROM employee left join role on employee.role_id = role.id
       GROUP BY role_id`;
       const onQueryAddEmployee = async (err, rows) => {
         if (err) throw err;
-
-        const addRoleChoices = rows.map((row) => {
+        const [employees, managers] = rows;
+        const addRoleChoices = await employees.map((row) => {
           return {
             name: row.title,
             value: row.role_id,
@@ -184,23 +191,14 @@ const init = async () => {
           };
         });
 
-        const managerChoices = await rows.map((row) => {
+        const managerChoices = await managers.map((row) => {
           return {
             name: `${row.first_name} ${row.last_name}`,
             value: row.id,
             short: `${row.first_name} ${row.last_name}`,
           };
         });
-        // .push({
-        //   name: "none",
-        //   value: "none",
-        //   short: "none",
-        // });
-        // const managerChoices = managerGenerator.push({
-        //   name: "none",
-        //   value: "none",
-        //   short: "none",
-        // });
+
         const addQuestions = [
           {
             message: "what is the new employee's name?",
@@ -232,7 +230,7 @@ const init = async () => {
             when: (answers) => answers.managerChecker === "Yes",
           },
         ];
-
+        //the null bit for manager_id might throw an error
         const addAnswers = await inquirer.prompt(addQuestions);
         console.log(addAnswers.managerId);
         const queryAddingEmployee = `
@@ -240,8 +238,7 @@ const init = async () => {
         first_name= "${addAnswers.addFirstName}", 
         last_name= "${addAnswers.addLastName}", 
         role_id= "${addAnswers.roleId}",
-        manager_id= "${addAnswers.managerId}";`;
-        // SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager FROM employee LEFT JOIN role on employee.role_id = role.id LEFT JOIN department on role.department_id = department.id LEFT JOIN employee manager on manager.id = employee.manager_id;;
+        manager_id= "${addAnswers.managerId || null}";`;
 
         const addSuccess = (err, rows) => {
           if (err) throw err;
@@ -251,7 +248,10 @@ const init = async () => {
         connection.query(queryAddingEmployee, addSuccess);
       };
 
-      connection.query(queryAddEmployee, onQueryAddEmployee);
+      connection.query(
+        `${queryAddEmployee};  ${allEmployeesQuery}`,
+        onQueryAddEmployee
+      );
       break;
     case "addDepartment":
       const addDeptQuestions = [
@@ -278,13 +278,6 @@ const init = async () => {
         "SELECT * FROM role  left join department on role.department_id = department.id GROUP BY department_id";
 
       const onQueryAddRole = async (err, rows) => {
-        const numberValidation = (input) => {
-          if (isNaN(input)) {
-            return "please enter numbers only";
-          }
-          return true;
-        };
-
         const addRollChoices = rows.map((row) => {
           return {
             name: row.name,
@@ -335,44 +328,193 @@ const init = async () => {
 
       connection.query(queryAddRole, onQueryAddRole);
       break;
-    // case "allSongs":
-    //   const { artist } = await inquirer.prompt({
-    //     message: "Name of the Artist",
-    //     name: "artist",
-    //   });
-    //   selectWhere(connection, "top5000", { artist });
-    //   break;
-    // case "allDuplicateArtists":
-    //   multipleOccurrences(connection, "artist", "top5000");
-    //   break;
-    // case "allSongsInRange":
-    //   const { start, end } = await inquirer.prompt([
-    //     {
-    //       message: "Start Year",
-    //       name: "start",
-    //     },
-    //     {
-    //       message: "End Year",
-    //       name: "end",
-    //     },
-    //   ]);
-    //   rangeSearch(connection, {
-    //     columns: ["artist", "release_year"],
-    //     table: "top5000",
-    //     column: "release_year",
-    //     start,
-    //     end,
-    //   });
-    //   break;
-    // case "specificSong":
-    //   const { single } = await inquirer.prompt({
-    //     message: "Name of the Single",
-    //     name: "single",
-    //   });
-    //   selectWhere(connection, "top5000", { single });
-    //   break;
-    // default:
-    //   break;
+    case "updateRole":
+      const queryUpdateRoleName = `SELECT * FROM employee LEFT JOIN role ON employee.role_id = role.id GROUP BY role_id`;
+
+      const onQueryUpdateRole = async (err, rows) => {
+        if (err) throw err;
+
+        const [employees, roles] = rows;
+
+        const employeeList = await employees.map((employee) => {
+          return {
+            name: `${employee.first_name} ${employee.last_name}`,
+            value: employee.id,
+            short: `${employee.first_name} ${employee.last_name}`,
+          };
+        });
+        const selectRoleChoices = await roles.map((role) => {
+          return {
+            name: role.title,
+            value: role.role_id,
+            short: role.title,
+          };
+        });
+        const updateRoleQuestions = [
+          {
+            message: "Which employee role would you like to update",
+            name: "employeeName",
+            type: "list",
+            choices: employeeList,
+          },
+          {
+            message: "What is their new role?",
+            name: "updateRole",
+            type: "list",
+            choices: selectRoleChoices,
+          },
+        ];
+
+        const updateRoleAnswers = await inquirer.prompt(updateRoleQuestions);
+
+        const queryUpdateEmployeeRole = `
+          UPDATE employee SET 
+          role_id= "${updateRoleAnswers.updateRole}" 
+          WHERE id= ${updateRoleAnswers.employeeName}`;
+
+        const updateRoleSuccess = (err, rows) => {
+          if (err) throw err;
+
+          console.log("Successfully updated employee roll");
+          init();
+        };
+
+        connection.query(queryUpdateEmployeeRole, updateRoleSuccess);
+      };
+
+      connection.query(
+        `${allEmployeesQuery}; ${queryUpdateRoleName}`,
+        onQueryUpdateRole
+      );
+
+      break;
+    case "removeEmployee":
+      const onRemoveEmployeeQuery = async (err, rows) => {
+        if (err) throw err;
+
+        const choices = await rows.map((row) => {
+          return {
+            name: `${row.first_name} ${row.last_name}`,
+            value: row.id,
+            short: `${row.first_name} ${row.last_name}`,
+          };
+        });
+
+        const questions = [
+          {
+            message: "Select an employee:",
+            name: "employeeId",
+            type: "list",
+            choices,
+          },
+        ];
+
+        const { employeeId } = await inquirer.prompt(questions);
+
+        const deleteEmployeeQuery = `DELETE FROM employee WHERE id=${employeeId}`;
+
+        const onDeleteEmployeeQuery = (err) => {
+          if (err) throw err;
+          console.log("Deleted employee successfully from DB");
+          init();
+        };
+
+        connection.query(deleteEmployeeQuery, onDeleteEmployeeQuery);
+      };
+
+      connection.query(allEmployeesQuery, onRemoveEmployeeQuery);
+      break;
+    case "employeesByManager":
+      const queryManagers = `
+    SELECT employee.id, employee.first_name, employee.last_name FROM employee
+    INNER JOIN (SELECT DISTINCT(manager_id) FROM company_db.employee WHERE manager_id IS NOT NULL) as manager
+    on employee.id = manager.manager_id
+    `;
+
+      const onQueryViewByManager = async (err, rows) => {
+        if (err) throw err;
+
+        const choices = await rows.map((row) => {
+          return {
+            name: `${row.first_name} ${row.last_name}`,
+            value: row.id,
+            short: `${row.first_name} ${row.last_name}`,
+          };
+        });
+
+        const questions = [
+          {
+            message: "Select a manager:",
+            name: "managerId",
+            type: "list",
+            choices,
+          },
+        ];
+
+        const { managerId } = await inquirer.prompt(questions);
+
+        const queryEmployeesByManager = `
+      SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name as department
+      FROM employee LEFT JOIN role on employee.role_id = role.id
+      LEFT JOIN department on role.department_id = department.id
+      WHERE employee.manager_id = ${managerId}
+      `;
+
+        connection.query(queryEmployeesByManager, onEmployeeQuery);
+      };
+
+      connection.query(queryManagers, onQueryViewByManager);
+      break;
+      case "updateManager":
+
+        const onQueryUpdateManager = async (err, rows) => {
+          if (err) throw err;
+  
+          const employeeList = await rows.map((row) => {
+            return {
+              name: `${row.first_name} ${row.last_name}`,
+              value: row.id,
+              short: `${row.first_name} ${row.last_name}`,
+            };
+          });
+
+          const updateManagerQuestions = [
+            {
+              message: "Which employee's manager would you like to update",
+              name: "employeeName",
+              type: "list",
+              choices: employeeList,
+            },
+            {
+              message: "Who is the employee's new manager",
+              name: "updateManager",
+              type: "list",
+              choices: employeeList,
+            },
+          ];
+  
+          const updateManagerAnswers = await inquirer.prompt(updateManagerQuestions);
+  
+          const queryUpdateEmployeeManager = `
+            UPDATE employee SET 
+            manager_id= "${updateManagerAnswers.updateManager}" 
+            WHERE id= ${updateManagerAnswers.employeeName}`;
+  
+          const updateManagerSuccess = (err, rows) => {
+            if (err) throw err;
+  
+            console.log("Successfully updated employee's manager");
+            init();
+          };
+  
+          connection.query(queryUpdateEmployeeManager, updateManagerSuccess);
+        };
+  
+        connection.query(allEmployeesQuery, onQueryUpdateManager);
+        break;
+    case "end":
+      process.exit()
+      break;
   }
 };
 const onConnect = (err) => {
@@ -385,102 +527,131 @@ const onConnect = (err) => {
 
 connection.connect(onConnect);
 
-// const init = async () => {
-//   const { operation } = await inquirer.prompt(questions);
+// ///////////////////////////////////
 
-//   switch (operation) {
-//     case "viewAll":
-//       //   connection.query("SELECT * FROM employee", function (err, res) {
-//       //     if (err) throw err;
-//       //     console.table(res);
-//       //   });
-//       async function viewEmployees() {
-//         const employees = await findAllEmployees();
+// if (action === "removeEmployee") {
+//   const allEmployeesQuery = "SELECT * FROM employee";
 
-//         console.table(employees);
+//   const onAllEmployeesQuery = async (err, employees) => {
+//     if (err) throw err;
 
+//     const choices = employees.map((employee) => {
+//       return {
+//         name: `${employee.first_name} ${employee.last_name}`,
+//         value: employee.id,
+//         short: `${employee.first_name} ${employee.last_name}`,
+//       };
+//     });
+
+//     const questions = [
+//       {
+//         message: "Select an employee:",
+//         name: "employeeId",
+//         type: "list",
+//         choices,
+//       },
+//     ];
+
+//     const { employeeId } = await inquirer.prompt(questions);
+
+//     const deleteEmployeeQuery = `DELETE FROM employee WHERE id=${employeeId}`;
+
+//     const onDeleteEmployeeQuery = (err) => {
+//       if (err) throw err;
+//       console.log("Deleted employee successfully from DB");
+//       init();
+//     };
+
+//     connection.query(deleteEmployeeQuery, onDeleteEmployeeQuery);
+//   };
+
+//   connection.query(allEmployeesQuery, onAllEmployeesQuery);
+// }
+
+// /////////////////////////////////////
+
+// if (action === "end") {
+//   process.exit();
+// }
+
+// ///////////////////////////////////
+
+// const queryRoles = "SELECT * FROM role";
+//     const queryManagers = `
+//     SELECT employee.id, employee.first_name, employee.last_name FROM employee
+//     INNER JOIN (SELECT DISTINCT(manager_id) FROM company_db.employee WHERE manager_id IS NOT NULL) as manager
+//     on employee.id = manager.manager_id
+//     `;
+
+//     const onQuery = async (err, rows) => {
+//       if (err) throw err;
+//       const [roles, managers] = rows;
+
+//       const roleChoices = roles.map((role) => {
+//         return {
+//           name: role.title,
+//           value: role.id,
+//           short: role.title,
+//         };
+//       });
+
+//       const managerChoices = managers.map((manager) => {
+//         return {
+//           name: `${manager.first_name} ${manager.last_name}`,
+//           value: manager.id,
+//           short: `${manager.first_name} ${manager.last_name}`,
+//         };
+//       });
+
+//       const questions = [
+//         {
+//           message: "What is your first name?",
+//           name: "firstName",
+//           type: "input",
+//         },
+//         {
+//           message: "What is your last name?",
+//           name: "lastName",
+//           type: "input",
+//         },
+//         {
+//           message: "Select a role:",
+//           name: "roleId",
+//           type: "list",
+//           choices: roleChoices,
+//         },
+//         {
+//           message: "Do you want to select a manager?",
+//           name: "manager",
+//           type: "confirm",
+//         },
+//         {
+//           message: "Select manager:",
+//           name: "managerId",
+//           type: "list",
+//           choices: managerChoices,
+//           when: (answers) => {
+//             return answers.manager;
+//           },
+//         },
+//       ];
+
+//       const answers = await inquirer.prompt(questions);
+
+//       const addEmployeeQuery = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ("${
+//         answers.firstName
+//       }", "${answers.lastName}", ${answers.roleId}, ${
+//         answers.managerId || null
+//       })`;
+
+//       const onEmployeeAddQuery = (err) => {
+//         if (err) throw err;
+//         console.log("Successfully added employee to DB");
 //         init();
-//       }
-//       break;
-//     // case "employeesByDept":
-//     //   const { dept } = await inquirer.prompt({
-//     //     name: "dept",
-//     //     message: "which department employees do you want to load?",
-//     //     type: "list",
-//     //     choices: ["IT", "Finance", "Marketing"],
-//     //   });
+//       };
 
-//     //   selectWhere(connection, "department", dept);
-//     case "addEmployee":
-//       const { newEmployeeInfo } = await inquirer.prompt([
-//         {
-//           name: "newFirstName",
-//           message: "First name of new employee",
-//           type: "input",
-//         },
-//         {
-//           name: "newLastName",
-//           message: "Last name of new employee",
-//           type: "input",
-//         },
-//         {
-//           name: "newEmployeeDepartment",
-//           message: "what department is the new employee in?",
-//           type: "list",
-//           choices: ["IT", "Finance", "Marketing"],
-//         },
-//         //switch statement to display role choices for each answer then switch for if not a manager role choose from pulled list
-//         {
-//           name: "newEmployeeRole",
-//           message: "what is the new employee's role?",
-//           type: "list",
-//           choices: ["a", "b"],
-//         },
-//         {
-//           name: "newEmployeeManager",
-//           message: "does this employee have a manager?",
-//           type: "list",
-//           choices: ["a", "b"],
-//         },
-//       ]);
-//       newEmployeeFunction(connection, "employee", { newEmployeeInfo });
-//     case "allSongs":
-//       const { artist } = await inquirer.prompt({
-//         message: "Name of the Artist",
-//         name: "artist",
-//       });
-//       selectWhere(connection, "top5000", { artist });
-//       break;
-//     case "allDuplicateArtists":
-//       multipleOccurrences(connection, "artist", "top5000");
-//       break;
-//     case "allSongsInRange":
-//       const { start, end } = await inquirer.prompt([
-//         {
-//           message: "Start Year",
-//           name: "start",
-//         },
-//         {
-//           message: "End Year",
-//           name: "end",
-//         },
-//       ]);
-//       rangeSearch(connection, {
-//         columns: ["artist", "release_year"],
-//         table: "top5000",
-//         column: "release_year",
-//         start,
-//         end,
-//       });
-//       break;
-//     case "specificSong":
-//       const { single } = await inquirer.prompt({
-//         message: "Name of the Single",
-//         name: "single",
-//       });
-//       selectWhere(connection, "top5000", { single });
-//       break;
-//     default:
-//       break;
+//       connection.query(addEmployeeQuery, onEmployeeAddQuery);
+//     };
+
+//     connection.query(`${queryRoles}; ${queryManagers}`, onQuery);
 //   }
-// };
