@@ -7,6 +7,7 @@ const {
   newEmployeeFunction,
 } = require("./util");
 
+//connection to the mysql database
 const connection = mysql.createConnection({
   host: "localhost",
   port: 3306,
@@ -16,6 +17,7 @@ const connection = mysql.createConnection({
   multipleStatements: true,
 });
 
+//list of inquirer questions
 const questions = [
   {
     name: "operation",
@@ -68,6 +70,16 @@ const questions = [
         short: "Remove Employee",
       },
       {
+        name: "Remove role",
+        value: "removeRole",
+        short: "Remove role",
+      },
+      {
+        name: "Remove department",
+        value: "removeDepartment",
+        short: "Remove department",
+      },
+      {
         name: "Update employee role",
         value: "updateRole",
         short: "Update Role",
@@ -87,6 +99,7 @@ const questions = [
 ];
 
 const init = async () => {
+  //genernal function for displaying results as table and starting from the top
   const onEmployeeQuery = (err, rows) => {
     if (err) throw err;
     console.table(rows);
@@ -401,7 +414,7 @@ const init = async () => {
 
         const questions = [
           {
-            message: "Select an employee:",
+            message: "Select an employee to remove",
             name: "employeeId",
             type: "list",
             choices,
@@ -543,6 +556,80 @@ const init = async () => {
       };
 
       connection.query(queryBudget, onQueryBudget);
+      break;
+    case "removeRole":
+      const allRolesQuery = "SELECT * FROM role";
+      const onRemoveRoleQuery = async (err, rows) => {
+        if (err) throw err;
+
+        const roleDeleteChoices = await rows.map((row) => {
+          return {
+            name: row.title,
+            value: row.id,
+            short: row.title,
+          };
+        });
+
+        const questions = [
+          {
+            message: "Select an role to remove",
+            name: "roleId",
+            type: "list",
+            choices: roleDeleteChoices,
+          },
+        ];
+
+        const { roleId } = await inquirer.prompt(questions);
+
+        const deleteRoleQuery = `DELETE FROM role WHERE id=${roleId}`;
+
+        const onDeleteRoleQuery = (err) => {
+          if (err) throw err;
+          console.log("Deleted role successfully from DB");
+          init();
+        };
+
+        connection.query(deleteRoleQuery, onDeleteRoleQuery);
+      };
+
+      connection.query(allRolesQuery, onRemoveRoleQuery);
+      break;
+    case "removeDepartment":
+      const allDepartmentsQuery = "SELECT * FROM department";
+      const onRemoveDepartmentQuery = async (err, rows) => {
+        if (err) throw err;
+
+        const departmentDeleteChoices = await rows.map((row) => {
+          return {
+            name: row.name,
+            value: row.id,
+            short: row.name,
+          };
+        });
+
+        const questions = [
+          {
+            message: "Select an department to remove",
+            name: "departmentId",
+            type: "list",
+            choices: departmentDeleteChoices,
+          },
+        ];
+
+        const { departmentId } = await inquirer.prompt(questions);
+
+        const deleteDepartmentQuery = `DELETE FROM department WHERE id=${departmentId}`;
+
+        const onDeleteDepartmentQuery = (err) => {
+          if (err) throw err;
+          console.log("Deleted department successfully from DB");
+          init();
+        };
+
+        connection.query(deleteDepartmentQuery, onDeleteDepartmentQuery);
+      };
+
+      connection.query(allDepartmentsQuery, onRemoveDepartmentQuery);
       break;
     case "end":
       process.exit();
