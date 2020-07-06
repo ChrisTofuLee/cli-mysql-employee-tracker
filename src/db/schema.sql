@@ -26,21 +26,3 @@ CREATE TABLE employee (
   CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE CASCADE,
   CONSTRAINT fk_manager FOREIGN KEY (manager_id) REFERENCES employee(id) ON DELETE SET NULL
 );
-
-
---for view all
-SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary,
-CONCAT(manager.first_name, ' ', manager.last_name) AS manager
-FROM employee 
-LEFT JOIN role 
-on employee.role_id = role.id 
-LEFT JOIN department 
-on role.department_id = department.id 
-LEFT JOIN employee manager 
-on manager.id = employee.manager_id
-
-
--- for view by department
--- SELECT role.id, role.title, department.name AS department, role.salary FROM role LEFT JOIN department on role.department_id = department.id
-
-
