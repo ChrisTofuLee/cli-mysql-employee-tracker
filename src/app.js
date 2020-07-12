@@ -99,7 +99,7 @@ const questions = [
 ];
 
 const init = async () => {
-  //genernal function for displaying results as table and starting from the top
+  //general function for displaying results as table and starting from the top
   const onEmployeeQuery = (err, rows) => {
     if (err) throw err;
     console.table(rows);
@@ -153,12 +153,12 @@ const init = async () => {
       connection.query(queryDept, onQueryDept);
       break;
     case "employeesByRole":
-      const queryRole = "SELECT * FROM role";
+      const queryByRole = "SELECT * FROM role";
 
-      const onQueryRole = async (err, rows) => {
+      const onQueryByRole = async (err, rows) => {
         if (err) throw err;
 
-        const roleChoices = await rows.map((row) => {
+        const roleChoices = rows.map((row) => {
           return {
             name: row.title,
             value: row.id,
@@ -189,7 +189,7 @@ const init = async () => {
         connection.query(queryEmployeesByRole, onEmployeeQuery);
       };
 
-      connection.query(queryRole, onQueryRole);
+      connection.query(queryByRole, onQueryByRole);
     case "addEmployee":
       const queryAddEmployee = `SELECT * FROM employee left join role on employee.role_id = role.id
       GROUP BY role_id`;
@@ -225,7 +225,7 @@ const init = async () => {
           },
           {
             message: "What is their role?",
-            name: "roleId",
+            name: "theRoleId",
             type: "list",
             choices: addRoleChoices,
           },
@@ -249,7 +249,7 @@ const init = async () => {
         INSERT INTO employee SET 
         first_name= "${addAnswers.addFirstName}", 
         last_name= "${addAnswers.addLastName}", 
-        role_id= "${addAnswers.roleId}",
+        role_id= "${addAnswers.theRoleId}",
         manager_id= "${addAnswers.managerId || null}";`;
 
         const addSuccess = (err, rows) => {
@@ -269,7 +269,7 @@ const init = async () => {
       const addDeptQuestions = [
         {
           message: "What is the name of the department?",
-          name: "name",
+          name: "deptName",
         },
       ];
 
@@ -573,15 +573,15 @@ const init = async () => {
         const questions = [
           {
             message: "Select an role to remove",
-            name: "roleId",
+            name: "removeRoleId",
             type: "list",
             choices: roleDeleteChoices,
           },
         ];
 
-        const { roleId } = await inquirer.prompt(questions);
+        const { removeRoleId } = await inquirer.prompt(questions);
 
-        const deleteRoleQuery = `DELETE FROM role WHERE id=${roleId}`;
+        const deleteRoleQuery = `DELETE FROM role WHERE id=${removeRoleId}`;
 
         const onDeleteRoleQuery = (err) => {
           if (err) throw err;
