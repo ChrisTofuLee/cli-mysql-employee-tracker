@@ -158,7 +158,7 @@ const init = async () => {
       const onQueryRole = async (err, rows) => {
         if (err) throw err;
 
-        const roleChoices = rows.map((row) => {
+        const roleChoices = await rows.map((row) => {
           return {
             name: row.title,
             value: row.id,
